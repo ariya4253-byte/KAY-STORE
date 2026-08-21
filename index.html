@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAY STORE - Toko Digital & Jual Beli UID Premium</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        kay: {
+                            bg: '#08080a',
+                            card: '#121218',
+                            hover: '#1a1a24',
+                            border: '#232330',
+                            red: '#dc2626',
+                            redHover: '#ef4444',
+                            redDark: '#991b1b',
+                            redGlow: 'rgba(220, 38, 38, 0.25)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Poppins', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #08080a;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .glow-effect {
+            box-shadow: 0 0 25px -5px rgba(220, 38, 38, 0.3);
+        }
+        .glow-subtle {
+            box-shadow: 0 0 15px -3px rgba(220, 38, 38, 0.15);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #08080a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232330;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- DATA DEFAULT PRODUK DUMMY ---
+        const DEFAULT_PRODUCTS = [
+            {
+                id: "1",
+                title: "UID Cantik #001",
+                category: "UID Cantik",
+                price: 10000,
+                status: "tersedia",
+                description: "UID 6 digit rapi, kombinasi angka kembar langka dan sangat mudah diingat.",
+                digital_content: "UID Secret: 888123 | Password: secure_pass_001",
+                image_url: ""
+            },
+            {
+                id: "2",
+                title: "UID Cantik #002",
+                category: "UID Cantik",
+                price: 15000,
+                status: "tersedia",
+                description: "UID cantik hoki seri 777. Cocok untuk akun utama/bisnis.",
+                digital_content: "UID Secret: 777999 | Pass: kay_vips_777",
+                image_url: ""
+            },
+            {
+                id: "3",
+                title: "SC Generate UID #001",
+                category: "SC Generate UID",
+                price: 20000,
+                status: "tersedia",
+                description: "Script otomatis generate UID rapi tanpa error. Fast processing.",
+                digital_content: "Download Link: https://kaystore.id/sc-gen-uid-v1.zip",
+                image_url: ""
+            },
+            {
+                id: "4",
+                title: "File Polosan UID #001",
+                category: "File Polosan UID",
+                price: 10000,
+                status: "tersedia",
+                description: "File polosan UID fresh tanpa bind media sosial manapun. Tinggal pakai.",
+                digital_content: "Data File: RAW_POLOSAN_UID_9921",
+                image_url: ""
+            },
+            {
+                id: "5",
+                title: "AM Premium 1 Tahun",
+                category: "Produk Premium",
+                price: 3000,
+                status: "tersedia",
+                description: "Alight Motion Premium Private Account Garansi Full 1 Tahun Anti Back.",
+                digital_content: "Email: am_vip_kaystore@gmail.com | Pass: premium2026",
+                image_url: ""
+            }
+        ];
+
+        const DEFAULT_SETTINGS = {
+            storeName: "KAY STORE",
+            subtitle: "Sell UID Cantik • Sell SC Generate UID • Sell File UID",
+            danaNumber: "083812735434",
+            gopayNumber: "083812735434",
+            whatsappContact: "083812735434",
+            qrisImage: "745862.jpg",
+
+            paymentInstructions: "Scan QRIS atau transfer ke DANA/GoPay. Setelah bayar, upload foto/screenshot bukti pembayaran.",
+            adminPassword: "admin123",
+            supabaseUrl: "",
+            supabaseKey: ""
+        };
+
+        function App() {
+            // State
+            const [products, setProducts] = useState(() => {
+                const local = localStorage.getItem('kay_products');
+                return local ? JSON.parse(local) : DEFAULT_PRODUCTS;
+            });
+
+            const [orders, setOrders] = useState(() => {
+                const local = localStorage.getItem('kay_orders');
+                return local ? JSON.parse(local) : [];
+            });
+
+            const [settings, setSettings] = useState(() => {
+                const local = localStorage.getItem('kay_settings');
+                return local ? JSON.parse(local) : DEFAULT_SETTINGS;
+            });
+
+            const [supabaseClient, setSupabaseClient] = useState(null);
+
+            // UI Filters & Controls
+            const [activeCategory, setActiveCategory] = useState('Semua');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [priceSort, setPriceSort] = useState('default');
+            const [statusFilter, setStatusFilter] = useState('Semua');
+
+            // Modals
+            const [selectedProduct, setSelectedProduct] = useState(null);
+            const [checkoutProduct, setCheckoutProduct] = useState(null);
+            const [showAdminModal, setShowAdminModal] = useState(false);
+            const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+            const [showQrisZoom, setShowQrisZoom] = useState(false);
+            
+            // Toast Notification
+            const [toastMessage, setToastMessage] = useState('');
+
+            // Save to LocalStorage on changes
+            useEffect(() => {
+                localStorage.setItem('kay_products', JSON.stringify(products));
+            }, [products]);
+
+            useEffect(() => {
+                localStorage.setItem('kay_orders', JSON.stringify(orders));
+            }, [orders]);
+
+            useEffect(() => {
+                localStorage.setItem('kay_settings', JSON.stringify(settings));
+            }, [settings]);
+
+            // Supabase Client Initialization (if URL & Key are set)
+            useEffect(() => {
+                if (settings.supabaseUrl && settings.supabaseKey && window.supabase) {
+                    try {
+                        const client = window.supabase.createClient(settings.supabaseUrl, settings.supabaseKey);
+                        setSupabaseClient(client);
+                        showToast('Terhubung ke Supabase Database!');
+                    } catch (err) {
+                        console.error('Supabase init error:', err);
+                    }
+                }
+            }, [settings.supabaseUrl, settings.supabaseKey]);
+
+            // Show Toast Helper
+            const showToast = (msg) => {
+                setToastMessage(msg);
+                setTimeout(() => setToastMessage(''), 3000);
+            };
+
+            // Filtered Products
+            const filteredProducts = useMemo(() => {
+                return products.filter(p => {
+                    const matchCat = activeCategory === 'Semua' || p.category === activeCategory;
+                    const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                        p.description.toLowerCase().includes(searchQuery.toLowerCase());
+                    const matchStatus = statusFilter === 'Semua' || p.status === statusFilter;
+                    return matchCat && matchSearch && matchStatus;
+                }).sort((a, b) => {
+                    if (priceSort === 'low') return a.price - b.price;
+                    if (priceSort === 'high') return b.price - a.price;
+                    return 0;
+                });
+            }, [products, activeCategory, searchQuery, priceSort, statusFilter]);
+
+            // Format Currency
+            const formatRupiah = (number) => {
+                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(number);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col bg-kay-bg text-gray-100 font-sans">
+                    
+                    {/* TOAST NOTIFICATION */}
+                    {toastMessage && (
+                        <div className="fixed top-5 right-5 z-50 bg-kay-red text-white px-5 py-3 rounded-xl shadow-2xl font-semibold flex items-center gap-3 animate-bounce">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>{toastMessage}</span>
+                        </div>
+                    )}
+
+                    {/* NAVBAR */}
+                    <nav className="sticky top-0 z-40 bg-kay-bg/90 backdrop-blur-md border-b border-kay-border">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-kay-red to-red-500 flex items-center justify-center font-black text-xl text-white shadow-lg shadow-kay-red/30">
+                                    K
+                                </div>
+                                <span className="text-2xl font-black tracking-wider text-white">
+                                    KAY <span className="text-kay-red">STORE</span>
+                                </span>
+                            </div>
+
+                            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
+                                <a href="#home" className="hover:text-kay-red transition">Home</a>
+                                <a href="#produk" className="hover:text-kay-red transition">Produk</a>
+                                <a href="#pembelian" className="hover:text-kay-red transition">Cara Pembelian</a>
+                                <a href="#pembayaran" className="hover:text-kay-red transition">Pembayaran</a>
+                                <a href="#kontak" className="hover:text-kay-red transition">Kontak</a>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowAdminModal(true)}
+                                className="bg-kay-card border border-kay-border hover:border-kay-red text-xs sm:text-sm px-4 py-2 rounded-xl text-gray-200 hover:text-white font-semibold transition flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4 text-kay-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                {isAdminLoggedIn ? 'Dashboard Admin' : 'Admin Login'}
+                            </button>
+                        </div>
+                    </nav>
+
+                    {/* HERO SECTION */}
+                    <header id="home" className="relative py-20 px-4 text-center overflow-hidden border-b border-kay-border">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-kay-red/15 blur-[140px] rounded-full pointer-events-none"></div>
+
+                        <div className="relative max-w-4xl mx-auto space-y-6">
+                            <span className="inline-block bg-kay-red/10 border border-kay-red/30 text-kay-red text-xs sm:text-sm px-4 py-1.5 rounded-full font-semibold uppercase tracking-widest">
+                                Official Digital Marketplace
+                            </span>
+                            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight">
+                                KAY <span className="text-kay-red drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]">STORE</span>
+                            </h1>
+                            <p className="text-gray-400 text-base sm:text-xl font-medium max-w-2xl mx-auto">
+                                {settings.subtitle}
+                            </p>
+                            
+                            <div className="flex flex-wrap justify-center gap-4 pt-4">
+                                <a href="#produk" className="bg-kay-red hover:bg-kay-redHover text-white font-bold px-8 py-3.5 rounded-xl transition shadow-lg shadow-kay-red/30 flex items-center gap-2">
+                                    <span>Lihat Produk</span>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </a>
+                                <a href={`https://wa.me/62${settings.whatsappContact.replace(/^0/,'')}`} target="_blank" className="bg-kay-card border border-kay-border hover:border-gray-500 text-white font-bold px-8 py-3.5 rounded-xl transition">
+                                    Hubungi Admin
+                                </a>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT AREA */}
+                    <main id="produk" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex-1 w-full space-y-12">
+                        
+                        {/* SEARCH & FILTER BAR */}
+                        <div className="bg-kay-card border border-kay-border rounded-2xl p-6 space-y-6">
+                            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                                {/* Search Bar */}
+                                <div className="relative w-full md:w-96">
+                                    <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                    <input 
+                                        type="text"
+                                        placeholder="Cari produk, UID, atau deskripsi..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full bg-kay-bg border border-kay-border focus:border-kay-red rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none transition"
+                                    />
+                                </div>
+
+                                {/* Filter Controls */}
+                                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                                    <select 
+                                        value={priceSort}
+                                        onChange={(e) => setPriceSort(e.target.value)}
+                                        className="bg-kay-bg border border-kay-border rounded-xl px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-kay-red"
+                                    >
+                                        <option value="default">Urutkan Harga</option>
+                                        <option value="low">Termurah -> Termahal</option>
+                                        <option value="high">Termahal -> Termurah</option>
+                                    </select>
+
+                                    <select 
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="bg-kay-bg border border-kay-border rounded-xl px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-kay-red"
+                                    >
+                                        <option value="Semua">Semua Status</option>
+                                        <option value="tersedia">Tersedia</option>
+                                        <option value="terjual">Terjual</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Category Pills */}
+                            <div id="kategori" className="flex flex-wrap gap-2 pt-2 border-t border-kay-border/50">
+                                {['Semua', 'UID Cantik', 'SC Generate UID', 'File Polosan UID', 'Produk Premium'].map((cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setActiveCategory(cat)}
+                                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                                            activeCategory === cat 
+                                            ? 'bg-kay-red text-white shadow-md shadow-kay-red/20' 
+                                            : 'bg-kay-bg text-gray-400 hover:text-white border border-kay-border'
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* PRODUCT GRID */}
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-white">
+                                    Katalog Produk <span className="text-gray-500 text-sm font-normal">({filteredProducts.length} item)</span>
+                                </h2>
+                            </div>
+
+                            {filteredProducts.length === 0 ? (
+                                <div className="bg-kay-card border border-kay-border rounded-2xl p-12 text-center space-y-4">
+                                    <svg className="w-16 h-16 text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                                    <p className="text-gray-400 font-medium">Tidak ada produk yang cocok dengan pencarianmu.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredProducts.map((p) => {
+                                        const isAvailable = p.status === 'tersedia';
+                                        return (
+                                            <div 
+                                                key={p.id}
+                                                className="bg-kay-card border border-kay-border rounded-2xl p-6 hover:border-kay-red/60 transition duration-300 flex flex-col justify-between group hover:-translate-y-1 hover:shadow-xl hover:shadow-kay-red/5"
+                                            >
+                                                <div className="space-y-4">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <span className="text-xs font-bold text-kay-red bg-kay-red/10 border border-kay-red/20 px-3 py-1 rounded-lg">
+                                                            {p.category}
+                                                        </span>
+                                                        <span className={`text-xs font-bold px-3 py-1 rounded-lg ${
+                                                            isAvailable ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                        }`}>
+                                                            {isAvailable ? 'Tersedia' : 'Terjual'}
+                                                        </span>
+                                                    </div>
+
+                                                    <h3 className="text-xl font-bold text-white group-hover:text-kay-red transition">
+                                                        {p.title}
+                                                    </h3>
+
+                                                    <p className="text-gray-400 text-sm line-clamp-3 leading-relaxed">
+                                                        {p.description}
+                                                    </p>
+                                                </div>
+
+                                                <div className="pt-6 border-t border-kay-border/60 mt-6 flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 font-medium">Harga</p>
+                                                        <p className="text-lg font-black text-white">{formatRupiah(p.price)}</p>
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <button 
+                                                            onClick={() => setSelectedProduct(p)}
+                                                            className="bg-kay-bg hover:bg-kay-hover border border-kay-border text-gray-300 px-3 py-2 rounded-xl text-xs font-semibold transition"
+                                                        >
+                                                            Detail
+                                                        </button>
+                                                        <button 
+                                                            disabled={!isAvailable}
+                                                            onClick={() => setCheckoutProduct(p)}
+                                                            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                                                                isAvailable 
+                                                                ? 'bg-kay-red hover:bg-kay-redHover text-white shadow-md shadow-kay-red/20 active:scale-95' 
+                                                                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                                            }`}
+                                                        >
+                                                            {isAvailable ? 'Beli Sekarang' : 'Terjual'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* CARA PEMBELIAN SECTION */}
+                        <section id="pembelian" className="bg-kay-card border border-kay-border rounded-2xl p-8 space-y-6">
+                            <h2 className="text-2xl font-bold text-white text-center">Cara Pembelian Mudah & Cepat</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                                <div className="space-y-2 p-4 bg-kay-bg border border-kay-border rounded-xl">
+                                    <div className="w-10 h-10 bg-kay-red/20 text-kay-red font-black text-lg rounded-full flex items-center justify-center mx-auto">1</div>
+                                    <h4 className="font-bold text-white">Pilih Produk</h4>
+                                    <p className="text-xs text-gray-400">Pilih ID, SC, atau file digital yang ingin kamu beli.</p>
+                                </div>
+                                <div className="space-y-2 p-4 bg-kay-bg border border-kay-border rounded-xl">
+                                    <div className="w-10 h-10 bg-kay-red/20 text-kay-red font-black text-lg rounded-full flex items-center justify-center mx-auto">2</div>
+                                    <h4 className="font-bold text-white">Isi Data & Bayar</h4>
+                                    <p className="text-xs text-gray-400">Masukkan Nama & WA, lalu pilih DANA, GoPay, atau QRIS.</p>
+                                </div>
+                                <div className="space-y-2 p-4 bg-kay-bg border border-kay-border rounded-xl">
+                                    <div className="w-10 h-10 bg-kay-red/20 text-kay-red font-black text-lg rounded-full flex items-center justify-center mx-auto">3</div>
+                                    <h4 className="font-bold text-white">Upload Bukti</h4>
+                                    <p className="text-xs text-gray-400">Upload screenshot pembayaran untuk verifikasi.</p>
+                                </div>
+                                <div className="space-y-2 p-4 bg-kay-bg border border-kay-border rounded-xl">
+                                    <div className="w-10 h-10 bg-kay-red/20 text-kay-red font-black text-lg rounded-full flex items-center justify-center mx-auto">4</div>
+                                    <h4 className="font-bold text-white">Terima Produk</h4>
+                                    <p className="text-xs text-gray-400">Verifikasi cepat via WA/Dashboard dan terima data digitalmu!</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* PEMBAYARAN SECTION */}
+                        <section id="pembayaran" className="space-y-6">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl font-bold text-white">Pembayaran Aman & Mudah</h2>
+                                <p className="text-gray-400 text-sm">Dukungan metode pembayaran terlengkap untuk kenyamanan transaksi kamu.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* DANA Card */}
+                                <div className="bg-kay-card border border-kay-border p-6 rounded-2xl space-y-4 text-center hover:border-blue-500/50 transition">
+                                    <div className="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-xl flex items-center justify-center mx-auto font-black text-xl">
+                                        DANA
+                                    </div>
+                                    <h3 className="font-bold text-white text-lg">Metode DANA</h3>
+                                    <p className="text-xl font-mono font-bold text-blue-400">{settings.danaNumber}</p>
+                                    <button 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(settings.danaNumber);
+                                            showToast('Nomor DANA berhasil disalin!');
+                                        }}
+                                        className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-semibold py-2 rounded-xl text-xs transition"
+                                    >
+                                        Copy Nomor DANA
+                                    </button>
+                                </div>
+
+                                {/* GOPAY Card */}
+                                <div className="bg-kay-card border border-kay-border p-6 rounded-2xl space-y-4 text-center hover:border-emerald-500/50 transition">
+                                    <div className="w-12 h-12 bg-emerald-600/20 text-emerald-400 rounded-xl flex items-center justify-center mx-auto font-black text-xl">
+                                        GOPAY
+                                    </div>
+                                    <h3 className="font-bold text-white text-lg">Metode GoPay</h3>
+                                    <p className="text-xl font-mono font-bold text-emerald-400">{settings.gopayNumber}</p>
+                                    <button 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(settings.gopayNumber);
+                                            showToast('Nomor GoPay berhasil disalin!');
+                                        }}
+                                        className="w-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-semibold py-2 rounded-xl text-xs transition"
+                                    >
+                                        Copy Nomor GoPay
+                                    </button>
+                                </div>
+
+                                {/* QRIS Card */}
+                                <div className="bg-kay-card border border-kay-border p-6 rounded-2xl space-y-4 text-center hover:border-kay-red/50 transition">
+                                    <div className="w-12 h-12 bg-kay-red/20 text-kay-red rounded-xl flex items-center justify-center mx-auto font-black text-xl">
+                                        QRIS
+                                    </div>
+                                    <h3 className="font-bold text-white text-lg">QRIS Semua Pembayaran</h3>
+                                    <p className="text-xs text-gray-400">Scan via BCA, Mandiri, GoPay, OVO, ShopeePay, DANA, dll.</p>
+                                    <button 
+                                        onClick={() => setShowQrisZoom(true)}
+                                        className="w-full bg-kay-red/20 hover:bg-kay-red/30 text-kay-red font-semibold py-2 rounded-xl text-xs transition"
+                                    >
+                                        Tampilkan QRIS Official
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                    </main>
+
+                    {/* FOOTER */}
+                    <footer id="kontak" className="bg-kay-card border-t border-kay-border py-12 px-4 mt-20">
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-white">KAY <span className="text-kay-red">STORE</span></h3>
+                                <p className="text-gray-400 text-xs max-w-sm">
+                                    Platform Jual Beli UID, Script Generate UID, dan File Digital Terpercaya.
+                                </p>
+                            </div>
+
+                            <div className="text-xs text-gray-500 space-y-1">
+                                <p>© 2026 KAY STORE. All Rights Reserved.</p>
+                                <p>WhatsApp CS: <span className="text-gray-300 font-mono">{settings.whatsappContact}</span></p>
+                            </div>
+                        </div>
+                    </footer>
+
+                    {/* FLOATING WHATSAPP BUTTON */}
+                    <a 
+                        href={`https://wa.me/62${settings.whatsappContact.replace(/^0/,'')}`}
+                        target="_blank"
+                        className="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition transform hover:scale-110"
+                        title="Chat WhatsApp"
+                    >
+                        <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.572-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                    </a>
+
+                    {/* MODAL DETAIL PRODUK */}
+                    {selectedProduct && (
+                        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-kay-card border border-kay-border rounded-2xl max-w-lg w-full p-6 space-y-6 relative max-h-[90vh] overflow-y-auto">
+                                <button 
+                                    onClick={() => setSelectedProduct(null)}
+                                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+
+                                <div className="space-y-2">
+                                    <span className="text-xs font-bold text-kay-red bg-kay-red/10 border border-kay-red/20 px-3 py-1 rounded-lg">
+                                        {selectedProduct.category}
+                                    </span>
+                                    <h3 className="text-2xl font-bold text-white pt-2">{selectedProduct.title}</h3>
+                                    <p className="text-2xl font-black text-kay-red">{formatRupiah(selectedProduct.price)}</p>
+                                </div>
+
+                                <div className="space-y-2 bg-kay-bg border border-kay-border p-4 rounded-xl">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase">Deskripsi Produk</h4>
+                                    <p className="text-sm text-gray-300 whitespace-pre-line leading-relaxed">{selectedProduct.description}</p>
+                                </div>
+
+                                <div className="p-4 bg-kay-red/10 border border-kay-red/20 rounded-xl text-xs text-gray-400">
+                                    🔒 Data digital/UID sensitif akan diberikan secara otomatis setelah pembayaran kamu diverifikasi oleh admin.
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setSelectedProduct(null)}
+                                        className="w-1/2 bg-kay-bg hover:bg-kay-hover border border-kay-border py-3 rounded-xl text-sm font-semibold transition"
+                                    >
+                                        Tutup
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            setCheckoutProduct(selectedProduct);
+                                            setSelectedProduct(null);
+                                        }}
+                                        disabled={selectedProduct.status !== 'tersedia'}
+                                        className="w-1/2 bg-kay-red hover:bg-kay-redHover text-white py-3 rounded-xl text-sm font-bold transition disabled:bg-gray-800"
+                                    >
+                                        {selectedProduct.status === 'tersedia' ? 'Beli Sekarang' : 'Terjual'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL CHECKOUT & PEMBAYARAN */}
+                    {checkoutProduct && (
+                        <CheckoutModal 
+                            product={checkoutProduct} 
+                            settings={settings}
+                            onClose={() => setCheckoutProduct(null)}
+                            onOrderCreated={(newOrder) => {
+                                setOrders([newOrder, ...orders]);
+                                showToast('Pesanan berhasil dibuat!');
+                            }}
+                            showToast={showToast}
+                            formatRupiah={formatRupiah}
+                        />
+                    )}
+
+                    {/* MODAL QRIS ZOOM */}
+                    {showQrisZoom && (
+                        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+                            <div className="bg-kay-card border border-kay-border rounded-2xl max-w-md w-full p-6 text-center space-y-4 relative">
+                                <button 
+                                    onClick={() => setShowQrisZoom(false)}
+                                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                                
+                                <h3 className="text-xl font-bold text-white">QRIS KAY STORE</h3>
+                                <p className="text-xs text-gray-400">Scan menggunakan aplikasi e-wallet / mobile banking apapun</p>
+
+                                <div className="p-3 bg-white rounded-xl max-w-xs mx-auto">
+                                    <img 
+                                        src={settings.qrisImage} 
+                                        alt="QRIS Kay Store" 
+                                        className="w-full h-auto object-contain rounded-lg"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "https://via.placeholder.com/350x450/111827/FFFFFF?text=Simpan+File+qris-kaystore.jpg+Di+Folder+Sama";
+                                        }}
+                                    />
+                                </div>
+
+                                <p className="text-xs font-mono text-gray-300">Merchant Name: <span className="text-kay-red font-bold">kaystore</span></p>
+
+                                <a 
+                                    href={settings.qrisImage} 
+                                    target="_blank" 
+                                    download="qris-kaystore.jpg"
+                                    className="block w-full bg-kay-red hover:bg-kay-redHover text-white py-2.5 rounded-xl text-xs font-bold transition"
+                                >
+                                    Download QRIS Image
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL ADMIN & DASHBOARD */}
+                    {showAdminModal && (
+                        <AdminModal 
+                            isAdminLoggedIn={isAdminLoggedIn}
+                            setIsAdminLoggedIn={setIsAdminLoggedIn}
+                            onClose={() => setShowAdminModal(false)}
+                            settings={settings}
+                            setSettings={setSettings}
+                            products={products}
+                            setProducts={setProducts}
+                            orders={orders}
+                            setOrders={setOrders}
+                            showToast={showToast}
+                            formatRupiah={formatRupiah}
+                        />
+                    )}
+
+                </div>
+            );
+        }
+
+        // --- SUB-KOMPONEN CHECKOUT MODAL ---
+        function CheckoutModal({ product, settings, onClose, onOrderCreated, showToast, formatRupiah }) {
+            const [customerName, setCustomerName] = useState('');
+            const [whatsapp, setWhatsapp] = useState('');
+            const [paymentMethod, setPaymentMethod] = useState('QRIS');
+            const [paymentProof, setPaymentProof] = useState(null);
+            const [paymentProofUrl, setPaymentProofUrl] = useState('');
+            const [createdOrder, setCreatedOrder] = useState(null);
+
+            const generateOrderId = () => {
+                const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+                const random = Math.floor(1000 + Math.random() * 9000);
+                return `KAY-${dateStr}-${random}`;
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Ukuran file maksimal 5MB!');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setPaymentProofUrl(reader.result);
+                };
+                reader.readAsDataURL(file);
+                setPaymentProof(file);
+            };
+
+            const handleSubmitOrder = (e) => {
+                e.preventDefault();
+                if (!customerName || !whatsapp) {
+                    alert('Mohon lengkapi Nama dan No WhatsApp');
+                    return;
+                }
+
+                const orderId = generateOrderId();
+                const newOrder = {
+                    id: orderId,
+                    productId: product.id,
+                    productTitle: product.title,
+                    price: product.price,
+                    customerName,
+                    whatsapp,
+                    paymentMethod,
+                    paymentProofUrl,
+                    status: 'Menunggu Verifikasi',
+                    createdAt: new Date().toLocaleString('id-ID')
+                };
+
+                onOrderCreated(newOrder);
+                setCreatedOrder(newOrder);
+            };
+
+            const handleConfirmWhatsapp = () => {
+                if (!createdOrder) return;
+                const phone = settings.whatsappContact.replace(/^0/,'62');
+                const text = `Halo Admin *KAY STORE*, saya telah membuat pesanan!
+
+*Detail Pesanan:*
+- No Order: ${createdOrder.id}
+- Nama: ${createdOrder.customerName}
+- Produk: ${createdOrder.productTitle}
+- Total Bayar: ${formatRupiah(createdOrder.price)}
+- Metode: ${createdOrder.paymentMethod}
+- Status: ${createdOrder.status}
+
+Mohon diproses pembayarannya, terima kasih!`;
+
+                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-kay-card border border-kay-border rounded-2xl max-w-lg w-full p-6 space-y-6 relative max-h-[90vh] overflow-y-auto">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+
+                        {!createdOrder ? (
+                            <form onSubmit={handleSubmitOrder} className="space-y-6">
+                                <h3 className="text-xl font-bold text-white">Form Pembelian - KAY STORE</h3>
+
+                                <div className="p-4 bg-kay-bg border border-kay-border rounded-xl space-y-1">
+                                    <p className="text-xs text-gray-400">Produk Dipilih:</p>
+                                    <p className="font-bold text-white">{product.title}</p>
+                                    <p className="text-kay-red font-black">{formatRupiah(product.price)}</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-300 mb-1">Nama Pembeli *</label>
+                                        <input 
+                                            type="text" 
+                                            required
+                                            placeholder="Masukkan nama lengkap"
+                                            value={customerName}
+                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            className="w-full bg-kay-bg border border-kay-border rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-kay-red"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-300 mb-1">Nomor WhatsApp *</label>
+                                        <input 
+                                            type="text" 
+                                            required
+                                            placeholder="Contoh: 0838xxxxxx"
+                                            value={whatsapp}
+                                            onChange={(e) => setWhatsapp(e.target.value)}
+                                            className="w-full bg-kay-bg border border-kay-border rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-kay-red"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-300 mb-1">Pilih Metode Pembayaran</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['QRIS', 'DANA', 'GOPAY'].map((m) => (
+                                                <button
+                                                    type="button"
+                                                    key={m}
+                                                    onClick={() => setPaymentMethod(m)}
+                                                    className={`py-2 rounded-xl text-xs font-bold transition border ${
+                                                        paymentMethod === m 
+                                                        ? 'bg-kay-red border-kay-red text-white' 
+                                                        : 'bg-kay-bg border-kay-border text-gray-400'
+                                                    }`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Instuksi & Tampilan Pembayaran */}
+                                    <div className="p-4 bg-kay-bg border border-kay-border rounded-xl space-y-3">
+                                        <h4 className="text-xs font-bold text-white uppercase">Instruksi Pembayaran</h4>
+
+                                        {paymentMethod === 'DANA' && (
+                                            <div className="text-center space-y-2">
+                                                <p className="text-xs text-gray-400">Transfer DANA ke nomor:</p>
+                                                <p className="text-lg font-mono font-bold text-blue-400">{settings.danaNumber}</p>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(settings.danaNumber);
+                                                        showToast('Nomor DANA Disalin!');
+                                                    }}
+                                                    className="px-4 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs font-semibold"
+                                                >
+                                                    Salin Nomor DANA
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {paymentMethod === 'GOPAY' && (
+                                            <div className="text-center space-y-2">
+                                                <p className="text-xs text-gray-400">Transfer GoPay ke nomor:</p>
+                                                <p className="text-lg font-mono font-bold text-emerald-400">{settings.gopayNumber}</p>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(settings.gopayNumber);
+                                                        showToast('Nomor GoPay Disalin!');
+                                                    }}
+                                                    className="px-4 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg text-xs font-semibold"
+                                                >
+                                                    Salin Nomor GoPay
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {paymentMethod === 'QRIS' && (
+                                            <div className="text-center space-y-2">
+                                                <p className="text-xs text-gray-400">Scan QRIS Resmi KAY STORE:</p>
+                                                <img 
+                                                    src={settings.qrisImage} 
+                                                    alt="QRIS" 
+                                                    className="w-48 h-auto mx-auto rounded-lg border border-gray-700"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = "https://via.placeholder.com/250x300/111827/FFFFFF?text=File+qris-kaystore.jpg";
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-300 mb-1">Upload Bukti Pembayaran (JPG/PNG/WebP)</label>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*"
+                                            onChange={handleFileUpload}
+                                            className="w-full text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-kay-red file:text-white hover:file:bg-kay-redHover cursor-pointer"
+                                        />
+                                        {paymentProofUrl && (
+                                            <img src={paymentProofUrl} alt="Preview Bukti" className="mt-2 h-24 rounded-lg border border-gray-700" />
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button 
+                                    type="submit"
+                                    className="w-full bg-kay-red hover:bg-kay-redHover text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-kay-red/20"
+                                >
+                                    Buat Pesanan & Verifikasi
+                                </button>
+                            </form>
+                        ) : (
+                            <div className="text-center space-y-6">
+                                <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-bold text-white">Pesanan Berhasil dibuat!</h3>
+                                    <p className="text-xs text-gray-400">Nomor Order Kamu:</p>
+                                    <p className="text-xl font-mono font-bold text-kay-red">{createdOrder.id}</p>
+                                </div>
+
+                                <div className="p-4 bg-kay-bg border border-kay-border rounded-xl text-left text-xs space-y-1">
+                                    <p className="text-gray-400">Produk: <span className="text-white font-semibold">{createdOrder.productTitle}</span></p>
+                                    <p className="text-gray-400">Total: <span className="text-white font-semibold">{formatRupiah(createdOrder.price)}</span></p>
+                                    <p className="text-gray-400">Metode: <span className="text-white font-semibold">{createdOrder.paymentMethod}</span></p>
+                                </div>
+
+                                <button 
+                                    onClick={handleConfirmWhatsapp}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2"
+                                >
+                                    <span>Konfirmasi via WhatsApp</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // --- SUB-KOMPONEN ADMIN DASHBOARD ---
+        function AdminModal({ isAdminLoggedIn, setIsAdminLoggedIn, onClose, settings, setSettings, products, setProducts, orders, setOrders, showToast, formatRupiah }) {
+            const [passInput, setPassInput] = useState('');
+            const [activeTab, setActiveTab] = useState('products'); // 'products', 'orders', 'settings'
+
+            // Form Edit/Tambah Produk
+            const [editProduct, setEditProduct] = useState(null);
+            const [newTitle, setNewTitle] = useState('');
+            const [newCategory, setNewCategory] = useState('UID Cantik');
+            const [newPrice, setNewPrice] = useState('');
+            const [newStatus, setNewStatus] = useState('tersedia');
+            const [newDesc, setNewDesc] = useState('');
+            const [newDigitalContent, setNewDigitalContent] = useState('');
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (passInput === settings.adminPassword) {
+                    setIsAdminLoggedIn(true);
+                    showToast('Login Admin Berhasil!');
+                } else {
+                    alert('Password Admin Salah!');
+                }
+            };
+
+            const handleSaveProduct = (e) => {
+                e.preventDefault();
+                if (editProduct) {
+                    // Update
+                    setProducts(products.map(p => p.id === editProduct.id ? {
+                        ...p,
+                        title: newTitle,
+                        category: newCategory,
+                        price: Number(newPrice),
+                        status: newStatus,
+                        description: newDesc,
+                        digital_content: newDigitalContent
+                    } : p));
+                    showToast('Produk Berhasil Diperbarui!');
+                } else {
+                    // Create
+                    const newP = {
+                        id: Date.now().toString(),
+                        title: newTitle,
+                        category: newCategory,
+                        price: Number(newPrice),
+                        status: newStatus,
+                        description: newDesc,
+                        digital_content: newDigitalContent
+                    };
+                    setProducts([newP, ...products]);
+                    showToast('Produk Baru Ditambahkan!');
+                }
+
+                // Reset Form
+                setEditProduct(null);
+                setNewTitle('');
+                setNewPrice('');
+                setNewDesc('');
+                setNewDigitalContent('');
+            };
+
+            const handleDeleteProduct = (id) => {
+                if (confirm('Yakin ingin menghapus produk ini?')) {
+                    setProducts(products.filter(p => p.id !== id));
+                    showToast('Produk Berhasil Dihapus');
+                }
+            };
+
+            const updateOrderStatus = (orderId, newStatus) => {
+                setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+                showToast(`Status Order Updated: ${newStatus}`);
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-kay-card border border-kay-border rounded-2xl max-w-4xl w-full p-6 space-y-6 relative max-h-[90vh] overflow-y-auto">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+
+                        {!isAdminLoggedIn ? (
+                            <form onSubmit={handleLogin} className="max-w-sm mx-auto py-8 space-y-4 text-center">
+                                <h3 className="text-2xl font-bold text-white">Login Admin KAY STORE</h3>
+                                <p className="text-xs text-gray-400">Masukkan password admin untuk mengelola toko.</p>
+
+                                <input 
+                                    type="password"
+                                    placeholder="Password Admin (Default: admin123)"
+                                    value={passInput}
+                                    onChange={(e) => setPassInput(e.target.value)}
+                                    className="w-full bg-kay-bg border border-kay-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-kay-red"
+                                />
+
+                                <button type="submit" className="w-full bg-kay-red hover:bg-kay-redHover text-white font-bold py-3 rounded-xl transition">
+                                    Login Dashboard
+                                </button>
+                            </form>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center border-b border-kay-border pb-4">
+                                    <h3 className="text-xl font-bold text-white">Dashboard Admin KAY STORE</h3>
+                                    <button 
+                                        onClick={() => setIsAdminLoggedIn(false)}
+                                        className="text-xs text-red-400 hover:text-red-300 font-semibold"
+                                    >
+                                        Logout
+                                    </button>
+                                </div>
+
+                                {/* TAB NAVIGATION */}
+                                <div className="flex gap-2">
+                                    {['products', 'orders', 'settings'].map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold transition uppercase ${
+                                                activeTab === tab ? 'bg-kay-red text-white' : 'bg-kay-bg text-gray-400'
+                                            }`}
+                                        >
+                                            {tab === 'products' ? 'Kelola Produk' : tab === 'orders' ? 'Kelola Pesanan' : 'Pengaturan Toko'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* TAB PRODUK */}
+                                {activeTab === 'products' && (
+                                    <div className="space-y-6">
+                                        {/* FORM PRODUK */}
+                                        <form onSubmit={handleSaveProduct} className="p-4 bg-kay-bg border border-kay-border rounded-xl space-y-4">
+                                            <h4 className="text-sm font-bold text-white">{editProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</h4>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <input 
+                                                    type="text" required placeholder="Judul Produk"
+                                                    value={newTitle} onChange={e => setNewTitle(e.target.value)}
+                                                    className="bg-kay-card border border-kay-border rounded-xl px-3 py-2 text-xs text-white"
+                                                />
+                                                <select 
+                                                    value={newCategory} onChange={e => setNewCategory(e.target.value)}
+                                                    className="bg-kay-card border border-kay-border rounded-xl px-3 py-2 text-xs text-white"
+                                                >
+                                                    <option value="UID Cantik">UID Cantik</option>
+                                                    <option value="SC Generate UID">SC Generate UID</option>
+                                                    <option value="File Polosan UID">File Polosan UID</option>
+                                                    <option value="Produk Premium">Produk Premium</option>
+                                                </select>
+                                                <input 
+                                                    type="number" required placeholder="Harga (Rp)"
+                                                    value={newPrice} onChange={e => setNewPrice(e.target.value)}
+                                                    className="bg-kay-card border border-kay-border rounded-xl px-3 py-2 text-xs text-white"
+                                                />
+                                                <select 
+                                                    value={newStatus} onChange={e => setNewStatus(e.target.value)}
+                                                    className="bg-kay-card border border-kay-border rounded-xl px-3 py-2 text-xs text-white"
+                                                >
+                                                    <option value="tersedia">Tersedia</option>
+                                                    <option value="terjual">Terjual</option>
+                                                </select>
+                                            </div>
+
+                                            <textarea 
+                                                placeholder="Deskripsi Produk" rows="2"
+                                                value={newDesc} onChange={e => setNewDesc(e.target.value)}
+                                                className="w-full bg-kay-card border border-kay-border rounded-xl p-3 text-xs text-white"
+                                            ></textarea>
+
+                                            <input 
+                                                type="text" placeholder="Data Rahasia / Digital Content (Hanya Diberikan Setelah Lunas)"
+                                                value={newDigitalContent} onChange={e => setNewDigitalContent(e.target.value)}
+                                                className="w-full bg-kay-card border border-kay-border rounded-xl px-3 py-2 text-xs text-white"
+                                            />
+
+                                            <div className="flex gap-2">
+                                                <button type="submit" className="bg-kay-red text-white text-xs font-bold px-4 py-2 rounded-xl">
+                                                    {editProduct ? 'Update Produk' : 'Simpan Produk'}
+                                                </button>
+                                                {editProduct && (
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => {
+                                                            setEditProduct(null);
+                                                            setNewTitle('');
+                                                            setNewPrice('');
+                                                            setNewDesc('');
+                                                            setNewDigitalContent('');
+                                                        }}
+                                                        className="bg-gray-700 text-white text-xs px-4 py-2 rounded-xl"
+                                                    >
+                                                        Batal
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </form>
+
+                                        {/* TABLE PRODUK */}
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-xs text-gray-300">
+                                                <thead className="bg-kay-bg uppercase text-gray-500">
+                                                    <tr>
+                                                        <th className="p-3">Judul</th>
+                                                        <th className="p-3">Kategori</th>
+                                                        <th className="p-3">Harga</th>
+                                                        <th className="p-3">Status</th>
+                                                        <th className="p-3">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-kay-border">
+                                                    {products.map(p => (
+                                                        <tr key={p.id}>
+                                                            <td className="p-3 font-bold text-white">{p.title}</td>
+                                                            <td className="p-3">{p.category}</td>
+                                                            <td className="p-3 font-mono">{formatRupiah(p.price)}</td>
+                                                            <td className="p-3">{p.status}</td>
+                                                            <td className="p-3 space-x-2">
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setEditProduct(p);
+                                                                        setNewTitle(p.title);
+                                                                        setNewCategory(p.category);
+                                                                        setNewPrice(p.price);
+                                                                        setNewStatus(p.status);
+                                                                        setNewDesc(p.description);
+                                                                        setNewDigitalContent(p.digital_content || '');
+                                                                    }}
+                                                                    className="text-blue-400 hover:underline"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button onClick={() => handleDeleteProduct(p.id)} className="text-red-400 hover:underline">Hapus</button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB ORDERS */}
+                                {activeTab === 'orders' && (
+                                    <div className="space-y-4">
+                                        {orders.length === 0 ? (
+                                            <p className="text-xs text-gray-500 text-center py-8">Belum ada pesanan masuk.</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {orders.map(o => (
+                                                    <div key={o.id} className="p-4 bg-kay-bg border border-kay-border rounded-xl space-y-3">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <p className="font-mono font-bold text-kay-red text-sm">{o.id}</p>
+                                                                <p className="text-xs text-white font-semibold">{o.customerName} ({o.whatsapp})</p>
+                                                                <p className="text-xs text-gray-400">Produk: {o.productTitle} - {formatRupiah(o.price)}</p>
+                                                            </div>
+                                                            <span className="text-xs bg-gray-800 text-gray-300 px-3 py-1 rounded-full font-bold">{o.status}</span>
+                                                        </div>
+
+                                                        {o.paymentProofUrl && (
+                                                            <div>
+                                                                <p className="text-[10px] text-gray-500">Bukti Transfer:</p>
+                                                                <a href={o.paymentProofUrl} target="_blank" rel="noreferrer">
+                                                                    <img src={o.paymentProofUrl} alt="Bukti" className="h-16 rounded border border-gray-700" />
+                                                                </a>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex flex-wrap gap-2 pt-2 border-t border-kay-border/50">
+                                                            {['Menunggu Verifikasi', 'Dibayar', 'Selesai', 'Dibatalkan'].map((st) => (
+                                                                <button
+                                                                    key={st}
+                                                                    onClick={() => updateOrderStatus(o.id, st)}
+                                                                    className="text-[10px] bg-kay-card border border-kay-border hover:border-kay-red px-2 py-1 rounded text-gray-300"
+                                                                >
+                                                                    Set {st}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* TAB SETTINGS */}
+                                {activeTab === 'settings' && (
+                                    <form onSubmit={(e) => { e.preventDefault(); showToast('Pengaturan Disimpan!'); }} className="space-y-4 text-xs">
+                                        <div>
+                                            <label className="block text-gray-400 mb-1">Nomor DANA</label>
+                                            <input 
+                                                type="text" value={settings.danaNumber} 
+                                                onChange={e => setSettings({...settings, danaNumber: e.target.value})}
+                                                className="w-full bg-kay-bg border border-kay-border rounded-xl p-2.5 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-400 mb-1">Nomor GoPay</label>
+                                            <input 
+                                                type="text" value={settings.gopayNumber} 
+                                                onChange={e => setSettings({...settings, gopayNumber: e.target.value})}
+                                                className="w-full bg-kay-bg border border-kay-border rounded-xl p-2.5 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-400 mb-1">WhatsApp Admin CS</label>
+                                            <input 
+                                                type="text" value={settings.whatsappContact} 
+                                                onChange={e => setSettings({...settings, whatsappContact: e.target.value})}
+                                                className="w-full bg-kay-bg border border-kay-border rounded-xl p-2.5 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-400 mb-1">Password Admin</label>
+                                            <input 
+                                                type="text" value={settings.adminPassword} 
+                                                onChange={e => setSettings({...settings, adminPassword: e.target.value})}
+                                                className="w-full bg-kay-bg border border-kay-border rounded-xl p-2.5 text-white"
+                                            />
+                                        </div>
+                                        <div className="pt-2 border-t border-kay-border">
+                                            <h5 className="font-bold text-white mb-2">Integrasi Database Supabase (Opsional)</h5>
+                                            <div className="space-y-2">
+                                                <input 
+                                                    type="text" placeholder="Supabase URL" value={settings.supabaseUrl} 
+                                                    onChange={e => setSettings({...settings, supabaseUrl: e.target.value})}
+                                                    className="w-full bg-kay-bg border border-kay-border rounded-xl p-2.5 text-white"
+                                                />
+                                                <input 
+                                                    type="text" placeholder="Supabase Anon Key" value={settings.supabaseKey} 
+                                                    onChange={e => setSettings({...settings, supabaseKey: e.target.value})}
+                                                    className="w-full bg-kay-bg border border-kay-border rounded-xl p-2.5 text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="bg-kay-red text-white font-bold px-6 py-2.5 rounded-xl">
+                                            Simpan Pengaturan
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
